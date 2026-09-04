@@ -1,0 +1,279 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山羊育种管理平台 - 档案卡</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary: #2d6a4f; }
+        body { background: #f5f7f5; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%); height: 100vh; width: 220px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; border-left: 3px solid transparent; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #95d5b2; }
+        .sidebar .nav-link i { margin-right: 8px; width: 20px; }
+        .main-content { margin-left: 220px; padding: 20px; }
+        .topbar { background: white; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; }
+        .archive-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .archive-title { background: var(--primary); color: white; padding: 16px 24px; border-radius: 12px 12px 0 0; font-size: 1.2rem; font-weight: 600; }
+        .info-row { display: flex; border-bottom: 1px solid #f0f0f0; }
+        .info-label { width: 100px; padding: 10px 16px; background: #f8f9fa; font-weight: 600; font-size: 0.9rem; color: #555; flex-shrink: 0; }
+        .info-value { padding: 10px 16px; flex: 1; font-size: 0.9rem; }
+        .section-title { padding: 12px 20px; font-weight: 600; color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: 0; }
+
+        /* 系谱树样式 */
+        .pedigree-tree { overflow-x: auto; padding: 20px 10px; }
+        .tree-node { border: 2px solid #ccc; border-radius: 8px; padding: 6px 10px; min-width: 90px; text-align: center; background: white; font-size: 0.8rem; line-height: 1.4; }
+        .tree-node.male { border-color: #40916c; background: #f0faf4; }
+        .tree-node.female { border-color: #e07a5f; background: #fff5f3; }
+        .tree-node.focus { border-color: var(--primary); border-width: 3px; box-shadow: 0 0 0 3px rgba(45,106,79,0.15); }
+        .tree-node .tag { font-weight: 700; font-size: 0.9rem; }
+        .tree-node .detail { color: #888; font-size: 0.7rem; }
+        .tree-level-label { text-align: center; font-size: 0.75rem; color: #999; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* 弹性系谱布局 */
+        .flex-pedigree { display: flex; align-items: stretch; gap: 0; }
+        .gen-column { display: flex; flex-direction: column; justify-content: center; gap: 12px; min-width: 110px; position: relative; }
+        .gen-column:first-child { min-width: 90px; }
+
+        /* 连线容器 */
+        .connector-col { width: 40px; min-width: 40px; position: relative; display: flex; flex-direction: column; justify-content: center; }
+
+        .pedigree-container { overflow-x: auto; padding: 10px 0; }
+        .pedigree-title { text-align: center; font-weight: 700; margin-bottom: 16px; color: var(--primary); font-size: 0.95rem; }
+
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar .nav { display: flex; flex-wrap: wrap; } .main-content { margin-left: 0; } .tree-node { min-width: 70px; font-size: 0.7rem; } }
+        @media print { .sidebar, .topbar, .btn { display: none !important; } .main-content { margin-left: 0 !important; padding: 0 !important; } .archive-card { box-shadow: none !important; break-inside: avoid; } }
+    
+        .sidebar-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.25); color: white; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed h5, .sidebar.collapsed .sidebar-toggle { display: none; }
+        .sidebar.collapsed .sidebar-toggle-collapsed { display: flex; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link i { margin-right: 0; text-align: center; width: 100%; }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+        .sidebar-toggle-collapsed { display: none; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; z-index: 10; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .sidebar.collapsed { width: 100%; } .sidebar.collapsed ~ .main-content { margin-left: 0; } }
+
+    </style>
+</head>
+<body>
+<nav class="sidebar">
+    <button class="sidebar-toggle-collapsed" onclick="document.querySelector('.sidebar').classList.remove('collapsed');localStorage.setItem('sb_clp','0');">↦</button>
+    <div class="px-3 pt-3 pb-2 text-white"><h5 style="font-size:1rem;line-height:1.2;white-space:nowrap;" class="mb-0">山羊育种管理平台</h5></div>
+    <ul class="nav flex-column">
+        <li><a href="/dashboard" class="nav-link"> 数据看板</a></li>
+        <li><a href="/sheep" class="nav-link active"> 羊只管理</a></li>
+        <li><a href="/breeding" class="nav-link"> 配种繁殖</a></li>
+        <li><a href="/measurement" class="nav-link"> 生长测定</a></li>
+        <li><a href="/import" class="nav-link"> 数据导入</a></li>
+    </ul>
+    <div class="mt-auto px-3 pb-3">
+        <hr style="border-color:rgba(255,255,255,0.2);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div><small class="text-white-50" id="currentUser">山羊联合育种管理系统</small><br><small class="text-white-50" id="currentRole" style="font-size:0.7rem;"></small></div>
+            <a href="#" class="btn btn-sm btn-outline-light" onclick="if(confirm('确定退出系统？')){window.close();}">退出</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-content">
+<div class="topbar d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"><span id="cardTitle">档案卡</span></h5>
+    <div>
+        <button class="btn btn-sm btn-outline-danger me-1" onclick="downloadPDF()"> 下载PDF</button>
+        <span class="text-muted small me-2" id="pdfTime" style="font-size:0.75rem;"></span>
+        <button class="btn btn-sm btn-outline-secondary me-1" onclick="window.print()"> 打印</button>
+        <a href="/sheep" class="btn btn-sm btn-outline-primary"> 返回</a>
+    </div>
+</div>
+
+<div class="container mt-3" id="cardContent">
+    <div class="text-center py-5 text-muted">加载中...</div>
+</div>
+</div>
+
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script>
+const isEditor = {{ 'true' if session.role != 'user' else 'false' }};
+const sheepId = {{ sheep_id }};
+
+function renderNode(n, cls, isFocus) {
+    if (!n) return '';
+    const focusClass = isFocus ? ' focus' : '';
+    return `<div class="tree-node ${cls}${focusClass}">
+        <div class="tag">${n.ear_tag || '—'}</div>
+    </div>`;
+}
+
+function renderPedigreeTree(pedigree) {
+    // 收集所有层级的节点
+    // Level 0: 当前羊只
+    // Level 1: 父, 母
+    // Level 2: 父父, 父母; 母父, 母母
+    // Level 3: 父父父, 父父母; 父母父, 父母母; 母父父, 母父母; 母母父, 母母母
+
+    const levels = [[], [], [], []];
+    levels[0].push({node: pedigree, cls: pedigree.sex === '公' ? 'male' : 'female', focus: true});
+
+    // Level 1
+    if (pedigree.father) {
+        levels[1].push({node: pedigree.father, cls: 'male'});
+    }
+    if (pedigree.mother) {
+        levels[1].push({node: pedigree.mother, cls: 'female'});
+    }
+
+    // Level 2
+    if (pedigree.father) {
+        if (pedigree.father.father) levels[2].push({node: pedigree.father.father, cls: 'male'});
+        if (pedigree.father.mother) levels[2].push({node: pedigree.father.mother, cls: 'female'});
+    }
+    if (pedigree.mother) {
+        if (pedigree.mother.father) levels[2].push({node: pedigree.mother.father, cls: 'male'});
+        if (pedigree.mother.mother) levels[2].push({node: pedigree.mother.mother, cls: 'female'});
+    }
+
+    // Level 3
+    if (pedigree.father) {
+        if (pedigree.father.father) {
+            if (pedigree.father.father.father) levels[3].push({node: pedigree.father.father.father, cls: 'male'});
+            if (pedigree.father.father.mother) levels[3].push({node: pedigree.father.father.mother, cls: 'female'});
+        }
+        if (pedigree.father.mother) {
+            if (pedigree.father.mother.father) levels[3].push({node: pedigree.father.mother.father, cls: 'male'});
+            if (pedigree.father.mother.mother) levels[3].push({node: pedigree.father.mother.mother, cls: 'female'});
+        }
+    }
+    if (pedigree.mother) {
+        if (pedigree.mother.father) {
+            if (pedigree.mother.father.father) levels[3].push({node: pedigree.mother.father.father, cls: 'male'});
+            if (pedigree.mother.father.mother) levels[3].push({node: pedigree.mother.father.mother, cls: 'female'});
+        }
+        if (pedigree.mother.mother) {
+            if (pedigree.mother.mother.father) levels[3].push({node: pedigree.mother.mother.father, cls: 'male'});
+            if (pedigree.mother.mother.mother) levels[3].push({node: pedigree.mother.mother.mother, cls: 'female'});
+        }
+    }
+
+    const labels = ['羊只', '亲代', '祖代', '曾祖代'];
+
+    // 生成HTML
+    let maxNodes = 1;
+    for (const lv of levels) { if (lv.length > maxNodes) maxNodes = lv.length; }
+
+    let html = '<div class="pedigree-title">三代系谱树</div>';
+    html += '<div class="pedigree-container"><div class="flex-pedigree">';
+
+    for (let li = 0; li < levels.length; li++) {
+        const lv = levels[li];
+        if (lv.length === 0) continue;
+
+        // 列
+        html += `<div class="gen-column"><div class="tree-level-label">${labels[li]}</div>`;
+        for (const item of lv) {
+            html += renderNode(item.node, item.cls, item.focus || false);
+        }
+        html += '</div>';
+
+        // 连线列 (最后一个 level 不加)
+        if (li < levels.length - 1) {
+            html += '<div class="connector-col"><svg width="100%" height="100%"><line x1="0" y1="50%" x2="100%" y2="50%" stroke="#ccc" stroke-width="1" stroke-dasharray="3,3"/></svg></div>';
+        }
+    }
+
+    html += '</div></div>';
+    return html;
+}
+
+async function loadCard() {
+    // 初始化用户信息
+    try {
+        if (meRes && meRes.ok) {
+        }
+    } catch(e) {}
+
+    const res = await fetch(`/api/sheep/${sheepId}`);
+    const d = await res.json();
+    if (d.error) { document.getElementById('cardContent').innerHTML = `<div class="alert alert-danger">${d.error}</div>`; return; }
+
+    const s = d.sheep;
+    const hasBred = d.breeding && d.breeding.length > 0;
+    const isEwe = s.sex === '母';
+    const cardTitle = (isEwe && hasBred) ? '母羊档案卡' : '羊只档案卡';
+    document.getElementById('cardTitle').textContent = cardTitle;
+
+    let html = `<div class="archive-card mb-3">
+        <div class="archive-title">${cardTitle}</div>
+        <div class="p-0">
+            <div class="section-title">一、基本信息</div>
+            <div class="info-row"><div class="info-label">场耳号</div><div class="info-value fw-bold">${s.ear_tag}</div><div class="info-label">电子耳号</div><div class="info-value">${s.electronic_ear_tag || '—'}</div></div>
+            <div class="info-row"><div class="info-label">品种</div><div class="info-value">${s.breed}</div><div class="info-label">性别</div><div class="info-value">${s.sex}</div></div>
+            <div class="info-row"><div class="info-label">出生日期</div><div class="info-value">${s.birth_date || '—'}</div><div class="info-label">来源</div><div class="info-value">${s.source || '—'}</div></div>
+            <div class="info-row"><div class="info-label">状态</div><div class="info-value"><span class="badge bg-${s.status==='在群'?'success':s.status==='淘汰'?'warning':s.status==='死亡'?'dark':'secondary'}">${s.status}</span>${s.status_reason ? '<br><small class=\"text-danger\">'+s.status_reason+'</small>' : ''}</div></div>`;
+    html += `<div class="section-title">二、系谱</div>`;
+    html += '<div class="p-2" id="pedigreeArea"><div class="text-center py-3 text-muted small">系谱加载中...</div></div>';
+
+    // 测定记录
+    html += `<div class="section-title">三、测定记录</div>`;
+    const measMap = {};
+    for (const m of d.measurements) measMap[m.stage] = m;
+    const stages = ['初生', '3月龄', '6月龄', '12月龄'];
+
+    if (s.sex === '公') {
+        const headers = ['阶段', '体重(kg)', '体高', '体斜长', '胸围', '管围', '臀宽', '睾丸围', '睾丸直径'];
+        html += `<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+        for (const st of stages) {
+            const m = measMap[st] || {};
+            html += `<tr><td>${st}</td><td>${m.weight || '—'}</td><td>${m.body_height || '—'}</td><td>${m.body_length || '—'}</td><td>${m.chest_girth || '—'}</td><td>${m.cannon_circumference || '—'}</td><td>${m.hip_width || '—'}</td><td>${m.testis_circumference || '—'}</td><td>${m.testis_diameter || '—'}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+    } else {
+        const headers = ['阶段', '体重(kg)', '体高', '体斜长', '胸围', '管围', '臀宽'];
+        html += `<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+        for (const st of stages) {
+            const m = measMap[st] || {};
+            html += `<tr><td>${st}</td><td>${m.weight || '—'}</td><td>${m.body_height || '—'}</td><td>${m.body_length || '—'}</td><td>${m.chest_girth || '—'}</td><td>${m.cannon_circumference || '—'}</td><td>${m.hip_width || '—'}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+    }
+
+    // 母羊生产信息
+    if (isEwe && d.breeding && d.breeding.length > 0) {
+        html += `<div class="section-title">四、生产信息</div>
+            <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>胎次</th><th>与配公羊</th><th>产羔日期</th><th>产羔数</th><th>活羔数</th><th>羔羊耳号</th></tr></thead><tbody>`;
+        for (let i = 0; i < d.breeding.length; i++) {
+            const br = d.breeding[i];
+            const lambStr = (br.lambs || []).map(l => `${l.lamb_ear_tag}(${l.sex})`).join(', ');
+            html += `<tr><td>第${i+1}胎</td><td>${br.ram_tag || '—'}</td><td>${br.lambing_date}</td><td>${br.total_born}</td><td>${br.live_born}</td><td>${lambStr || '—'}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+    }
+
+    html += '</div></div>';
+    document.getElementById('cardContent').innerHTML = html;
+
+    // 异步加载系谱树
+    try {
+        const pRes = await fetch(`/api/sheep/${sheepId}/pedigree`);
+        const pedigree = await pRes.json();
+        if (!pedigree.error) {
+            document.getElementById('pedigreeArea').innerHTML = renderPedigreeTree(pedigree);
+        } else {
+            document.getElementById('pedigreeArea').innerHTML = '<div class="text-muted small p-2">系谱数据不可用</div>';
+        }
+    } catch(e) {
+        document.getElementById('pedigreeArea').innerHTML = '<div class="text-muted small p-2">系谱加载失败</div>';
+    }
+}
+
+function downloadPDF() {
+    window.open(`/api/sheep/${sheepId}/card/pdf`);
+}
+
+loadCard();
+</script>
+</body>
+</html>

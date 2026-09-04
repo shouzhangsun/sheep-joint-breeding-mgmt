@@ -1,0 +1,36 @@
+# UTF-8
+#
+# PyInstaller 版本信息资源文件（RC 风格，非 JSON）。
+# 详见 https://pyinstaller.org/en/stable/usage.html#cmdoption-version
+VSVersionInfo(
+    ffi=FixedFileInfo(
+        filevers=(3, 0, 0, 0),
+        prodvers=(3, 0, 0, 0),
+        mask=0x3f,
+        flags=0x0,
+        OS=0x40004,
+        fileType=0x1,
+        subtype=0x0,
+        date=(0, 0),
+    ),
+    kids=[
+        StringFileInfo(
+            [
+                StringTable(
+                    u'080404B0',
+                    [
+                        StringStruct(u'CompanyName', u'区品改站shouzhangsun'),
+                        StringStruct(u'FileDescription', u'山羊联合育种管理系统'),
+                        StringStruct(u'FileVersion', u'3.0.0'),
+                        StringStruct(u'InternalName', u'SheepBreeding'),
+                        StringStruct(u'LegalCopyright', u'Copyright (C) 2026 区品改站shouzhangsun'),
+                        StringStruct(u'OriginalFilename', u'SheepBreeding.exe'),
+                        StringStruct(u'ProductName', u'山羊联合育种管理系统'),
+                        StringStruct(u'ProductVersion', u'3.0.0'),
+                    ],
+                )
+            ]
+        ),
+        VarFileInfo([VarStruct(u'Translation', [2052, 1200])]),
+    ]
+)

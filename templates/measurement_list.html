@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山羊育种管理平台 - 生长测定</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary: #2d6a4f; }
+        body { background: #f5f7f5; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%); height: 100vh; width: 220px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; border-left: 3px solid transparent; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #95d5b2; }
+        .sidebar .nav-link i { display: none; }
+        .main-content { margin-left: 220px; padding: 20px; }
+        .topbar { background: white; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; }
+        .card-custom { border-radius:12px; border:none; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+        .stage-cell { min-width: 68px; font-size: 0.78rem; }
+        .stage-cell .wgt { font-weight: bold; color: #2d6a4f; }
+        .stage-cell .date { font-size: 0.7rem; color: #888; margin-top: 1px; }
+        .stage-cell .none { color: #ccc; }
+        .stage-cell .judge-weak { color: #dc3545; font-size: 0.7rem; }
+        .body-cell { text-align: center; font-size: 0.75rem; color: #555; padding: 2px 3px !important; }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar .nav { display: flex; flex-wrap: wrap; } .main-content { margin-left: 0; } }
+    
+        .sidebar-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.25); color: white; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed h5, .sidebar.collapsed .sidebar-toggle { display: none; }
+        .sidebar.collapsed .sidebar-toggle-collapsed { display: flex; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link i { margin-right: 0; text-align: center; width: 100%; }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+        .sidebar-toggle-collapsed { display: none; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; z-index: 10; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .sidebar.collapsed { width: 100%; } .sidebar.collapsed ~ .main-content { margin-left: 0; } }
+
+            .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .sortable:hover { background: #e9ecef; }
+        .sort-arrow { font-size: 0.7rem; margin-left: 2px; }
+
+    </style>
+</head>
+<body>
+<nav class="sidebar">
+    <button class="sidebar-toggle-collapsed" onclick="document.querySelector('.sidebar').classList.remove('collapsed');localStorage.setItem('sb_clp','0');">↦</button>
+    <div class="px-3 pt-3 pb-2 text-white"><h5 style="font-size:1rem;line-height:1.2;white-space:nowrap;" class="mb-0">山羊育种管理平台</h5></div>
+    <ul class="nav flex-column">
+        <li><a href="/dashboard" class="nav-link"> 数据看板</a></li>
+        <li><a href="/sheep" class="nav-link"> 羊只管理</a></li>
+        <li><a href="/breeding" class="nav-link"> 配种繁殖</a></li>
+        <li><a href="/measurement" class="nav-link active"> 生长测定</a></li>
+        <li><a href="/import" class="nav-link"> 数据导入</a></li>
+    </ul>
+    <div class="mt-auto px-3 pb-3">
+        <hr style="border-color:rgba(255,255,255,0.2);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div><small class="text-white-50" id="currentUser">山羊联合育种管理系统</small><br><small class="text-white-50" id="currentRole" style="font-size:0.7rem;"></small></div>
+            <a href="#" class="btn btn-sm btn-outline-light" onclick="if(confirm('确定退出系统？')){window.close();}">退出</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-content">
+<div class="topbar d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">生长测定记录（按羊只）</h5>
+    <div>
+        {% if session.role != 'user' %}<button class="btn btn-sm btn-outline-success me-2" onclick="window.open('/api/export/measurement')"> 导出</button>{% endif %}
+        {% if session.role != "user" %}<a href="/measurement/add" class="btn btn-sm btn-success"> 新增测定</a>{% endif %}
+    </div>
+</div>
+
+<div class="container-fluid mt-3">
+    <div class="card card-custom mb-2"><div class="card-body py-1">
+        <div class="d-flex gap-1 align-items-center">
+            <input type="text" class="form-control form-control-sm" id="searchInput" style="max-width:260px;" placeholder="搜索耳号..." onkeyup="if(event.key==='Enter')loadData(1)">
+            <button class="btn btn-sm btn-outline-secondary" onclick="loadData(1)">查询</button>
+        </div>
+    </div></div>
+
+    <div class="card card-custom">
+        <div class="table-responsive"><table class="table table-hover mb-0 table-sm" style="font-size:0.78rem;">
+            <thead class="table-light"><tr>
+                <th style="min-width:75px">耳号</th>
+                <th style="min-width:36px">性别</th>
+                <th style="min-width:72px" class="sortable" onclick="toggleSort(event)" data-sort="birth_date">出生日期 <span class="sort-arrow"></span></th>
+                <th style="min-width:70px">初生重</th>
+                <th style="min-width:70px">3月龄重</th>
+                <th style="min-width:72px">6月龄重</th>
+                <th style="min-width:76px">12月龄重</th>
+                <th style="min-width:50px">体高</th>
+                <th style="min-width:55px">体斜长</th>
+                <th style="min-width:50px">胸围</th>
+                <th style="min-width:45px">管围</th>
+                <th style="min-width:50px">臀宽</th>
+                <th style="min-width:56px">睾丸围</th>
+                <th style="min-width:60px">睾丸直径</th>
+                <th style="min-width:110px">操作</th>
+            </tr></thead>
+            <tbody id="dataBody"></tbody>
+        </table></div>
+        <div class="card-footer d-flex justify-content-between">
+            <small class="text-muted" id="pageInfo"></small>
+            <nav><ul class="pagination pagination-sm mb-0" id="pagination"></ul></nav>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script>
+const isEditor = {{ 'true' if session.role != 'user' else 'false' }};
+let currentPage = 1;
+
+async function init() {
+    loadData();
+}
+
+// stageName 里只有 '初生'/'3月龄'/'6月龄' 保留编辑按钮，12月龄移除
+function fmtStage(s, stageName) {
+    if (!s) return '<span class="none">—</span>';
+    let html = '<span class="wgt">' + (s.weight || '—') + ' kg</span>';
+    html += '<div class="date">' + (s.measure_date || '') + '</div>';
+    if (s.judgment === '弱羊') html += '<span class="judge-weak">⚠弱羊</span>';
+    if (isEditor && stageName !== '12月龄') {
+        html += '<a href="/measurement/add?sheep_id=' + s.sheep_id + '&stage=' + s.stage + '&edit=' + s.id + '" class="btn btn-sm btn-outline-secondary py-0 px-1" title="编辑' + stageName + '"><i class="bi-pencil"></i></a>';
+    }
+    return html;
+}
+let sortBy = null, sortOrder = 'desc';
+function toggleSort(e) {
+    var col = e.currentTarget.dataset.sort;
+    if (sortBy === col) { sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'; }
+    else { sortBy = col; sortOrder = 'asc'; }
+    document.querySelectorAll('.sort-arrow').forEach(function(s){ s.textContent = ''; });
+    var el = e.currentTarget;
+    el.querySelector('.sort-arrow').textContent = sortOrder === 'asc' ? ' ▲' : ' ▼';
+    loadData(1);
+}
+
+async function loadData(page) {
+    page = page || 1; currentPage = page;
+    const params = new URLSearchParams({page, per_page: 200});
+    const s = document.getElementById('searchInput').value.trim();
+    if (s) params.set('search', s);
+    if (sortBy) params.set('sort_by', sortBy);
+    if (sortOrder) params.set('sort_order', sortOrder);
+    const res = await fetch('/api/measurement/by_sheep?' + params);
+    const d = await res.json();
+
+    let html = '';
+    for (const item of d.items) {
+        let row = '<tr>';
+        row += '<td><a href="/sheep/' + item.sheep_id + '/card" class="fw-bold text-decoration-none">' + item.ear_tag + '</a></td>';
+        row += '<td><span class="badge bg-' + (item.sex === '公' ? 'success' : 'danger') + '">' + item.sex + '</span></td>';
+        row += '<td class="small">' + (item.birth_date || '—') + '</td>';
+        ['初生', '3月龄', '6月龄', '12月龄'].forEach(function(st) {
+            row += '<td class="stage-cell">' + fmtStage(item.stages[st], st) + '</td>';
+        });
+        // 体尺7列（取12月龄数据）
+        var b12 = item.stages['12月龄'];
+        var bodyCols = ['body_height','body_length','chest_girth','cannon_circumference','hip_width','testis_circumference','testis_diameter'];
+        bodyCols.forEach(function(col) {
+            var v = b12 && b12[col] ? b12[col] : '';
+            row += '<td class="body-cell">' + (v === '' ? '—' : v) + '</td>';
+        });
+        // 操作列：添加测定 + 12月龄编辑
+        row += '<td style="white-space:nowrap;">';
+        if (isEditor && item.next_stage) {
+            row += '<a href="/measurement/add?sheep_id=' + item.sheep_id + '&stage=' + item.next_stage + '" class="btn btn-sm btn-success py-0 px-1" title="添加"><i class="bi-plus-circle"></i> ' + item.next_stage + '</a><br>';
+        }
+        if (isEditor && item.stages['12月龄']) {
+            var ms12 = item.stages['12月龄'];
+            row += '<a href="/measurement/add?sheep_id=' + item.sheep_id + '&stage=12月龄&edit=' + ms12.id + '" class="btn btn-sm btn-outline-secondary py-0 px-1" title="编辑12月龄"><i class="bi-pencil"></i> 12</a>';
+        }
+        row += '</td>';
+        row += '</tr>';
+        html += row;
+    }
+    document.getElementById('dataBody').innerHTML = html || '<tr><td colspan="15" class="text-center text-muted py-4">暂无测定数据</td></tr>';
+    document.getElementById('pageInfo').textContent = '共 ' + d.total + ' 只羊';
+
+    const tp = Math.ceil(d.total / d.per_page) || 1;
+    let pag = '';
+    for (let i = 1; i <= tp; i++) {
+        pag += '<li class="page-item ' + (i === page ? 'active' : '') + '"><a class="page-link" href="#" onclick="loadData(' + i + ')">' + i + '</a></li>';
+    }
+    document.getElementById('pagination').innerHTML = pag;
+}
+
+init();
+</script>
+</body>
+</html>

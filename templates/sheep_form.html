@@ -1,0 +1,286 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山羊育种管理平台 - 羊只表单</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary: #2d6a4f; }
+        body { background: #f5f7f5; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%); height: 100vh; width: 220px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; border-left: 3px solid transparent; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #95d5b2; }
+        .sidebar .nav-link i { margin-right: 8px; width: 20px; }
+        .main-content { margin-left: 220px; padding: 20px; }
+        .topbar { background: white; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar .nav { display: flex; flex-wrap: wrap; } .main-content { margin-left: 0; } }
+    
+        .sidebar-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.25); color: white; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed h5, .sidebar.collapsed .sidebar-toggle { display: none; }
+        .sidebar.collapsed .sidebar-toggle-collapsed { display: flex; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link i { margin-right: 0; text-align: center; width: 100%; }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+        .sidebar-toggle-collapsed { display: none; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; z-index: 10; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .sidebar.collapsed { width: 100%; } .sidebar.collapsed ~ .main-content { margin-left: 0; } }
+
+    </style>
+</head>
+<body>
+<nav class="sidebar">
+    <button class="sidebar-toggle-collapsed" onclick="document.querySelector('.sidebar').classList.remove('collapsed');localStorage.setItem('sb_clp','0');">↦</button>
+    <div class="px-3 pt-3 pb-2 text-white"><h5 style="font-size:1rem;line-height:1.2;white-space:nowrap;" class="mb-0">山羊育种管理平台</h5></div>
+    <ul class="nav flex-column">
+        <li><a href="/dashboard" class="nav-link"> 数据看板</a></li>
+        <li><a href="/sheep" class="nav-link active"> 羊只管理</a></li>
+        <li><a href="/breeding" class="nav-link"> 配种繁殖</a></li>
+        <li><a href="/measurement" class="nav-link"> 生长测定</a></li>
+        <li><a href="/import" class="nav-link"> 数据导入</a></li>
+    </ul>
+    <div class="mt-auto px-3 pb-3">
+        <hr style="border-color:rgba(255,255,255,0.2);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div><small class="text-white-50" id="currentUser">山羊联合育种管理系统</small><br><small class="text-white-50" id="currentRole" style="font-size:0.7rem;"></small></div>
+            <a href="#" class="btn btn-sm btn-outline-light" onclick="if(confirm('确定退出系统？')){window.close();}">退出</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-content">
+<div class="topbar"><h5 class="mb-0" id="formTitle">新增羊只</h5></div>
+<div class="container-fluid mt-3">
+    <div class="card" style="border-radius:12px;border:none;box-shadow:0 2px 8px rgba(0,0,0,0.06);max-width:800px;">
+        <div class="card-body p-4">
+            <form id="sheepForm">
+                <div class="row g-3">
+                    <div class="col-md-6"><label class="form-label">耳号 <span class="text-danger">*</span></label><input type="text" class="form-control" id="ear_tag" required></div>
+                    <div class="col-md-6"><label class="form-label">电子耳号</label><input type="text" class="form-control" id="electronic_ear_tag"></div>
+                    <div class="col-md-4"><label class="form-label">品种</label>
+                        <div class="input-group">
+                            <select class="form-select" id="breed"></select>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" title="新增品种" onclick="showQuickAddBreed()">＋</button>
+                        </div>
+                        <small class="text-muted" id="breedManageLink" style="display:none;cursor:pointer;" onclick="showBreedModal()"> 管理品种</small>
+                    </div>
+                    <div class="col-md-4"><label class="form-label">性别 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="sex" required><option value="">请选择</option><option value="公">公</option><option value="母">母</option></select>
+                    </div>
+                    <div class="col-md-4"><label class="form-label">出生日期</label><input type="date" class="form-control" id="birth_date"></div>
+                    <div class="col-md-4"><label class="form-label">父号</label><input type="text" class="form-control" id="father_tag" list="fatherList"><datalist id="fatherList"></datalist></div>
+                    <div class="col-md-4"><label class="form-label">母号</label><input type="text" class="form-control" id="mother_tag" list="motherList"><datalist id="motherList"></datalist></div>
+                    <div class="col-md-4"><label class="form-label">来源</label><input type="text" class="form-control" id="source" placeholder="自繁/购入"></div>
+                    <div class="col-md-4"><label class="form-label">状态</label>
+                        <select class="form-select" id="status" onchange="document.getElementById('statusReason').style.display=this.value==='在群'?'none':''"><option value="在群">在群</option><option value="淘汰">淘汰</option><option value="死亡">死亡</option><option value="出售">出售</option></select>
+                    </div>
+                    <div class="col-md-4" id="statusReasonRow" style="display:none"><label class="form-label">原因</label><input type="text" class="form-control" id="statusReason" placeholder="淘汰/死亡/出售原因"></div>
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-success"> 保存</button>
+                    <a href="/sheep" class="btn btn-outline-secondary">取消</a>
+                </div>
+                <div id="formError" class="alert alert-danger d-none mt-3 py-2"></div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script>
+const isEditor = {{ 'true' if session.role != 'user' else 'false' }};
+const sheepId = {{ sheep_id|default('null') }};
+let userRole = 'user';
+
+async function init() {
+    // 检查登录用户角色
+    try {
+        if (meRes && meRes.ok) {
+            userRole = 'admin';
+            document.getElementById('breedManageLink').style.display = '';
+        }
+    } catch(e) {}
+
+    document.getElementById('currentRole').textContent = userRole === 'admin' ? '管理员' : '普通用户';
+
+    await loadBreeds();
+    await loadTags();
+    await loadSheep();
+}
+
+async function loadBreeds() {
+    const res = await fetch('/api/breeds');
+    const breeds = await res.json();
+    let opts = '';
+    for (const b of breeds) {
+        opts += `<option value="${b.id}" data-name="${b.name}">${b.name}</option>`;
+    }
+    document.getElementById('breed').innerHTML = opts || '<option value="">请先添加品种</option>';
+}
+
+async function showBreedModal() {
+    const res = await fetch('/api/breeds');
+    const breeds = await res.json();
+    let listHtml = breeds.map(b => `
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <span>${b.name}</span>
+            <div>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteBreed(${b.id})"></button>
+            </div>
+        </div>`).join('');
+
+    const html = `
+        <div class="modal fade" id="breedModal" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header"><h6>品种管理</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <div class="mb-3"><label class="form-label">新品种</label>
+                            <div class="input-group"><input type="text" class="form-control" id="newBreedName" placeholder="品种名称"><button class="btn btn-success btn-sm" onclick="addBreed()">添加</button></div>
+                        </div>
+                        <div id="breedList">${listHtml}</div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    new bootstrap.Modal('#breedModal').show();
+}
+
+async function addBreed() {
+    const name = document.getElementById('newBreedName').value.trim();
+    if (!name) return;
+    const res = await fetch('/api/breeds', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})});
+    const d = await res.json();
+    if (d.success) {
+        await loadBreeds();
+        document.getElementById('breed').value = d.id;
+        bootstrap.Modal.getInstance('#breedModal').hide();
+        document.getElementById('breedModal').remove();
+    } else { alert(d.message); }
+}
+
+async function deleteBreed(id) {
+    if (!confirm('确定删除该品种？')) return;
+    await fetch(`/api/breeds/${id}`, {method:'DELETE'});
+    await loadBreeds();
+    document.getElementById('breedModal').remove();
+    showBreedModal();
+}
+
+// 所有登录用户均可即时新增品种（不含改名/删除）
+async function showQuickAddBreed() {
+    const html = `
+        <div class="modal fade" id="quickBreedModal" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header"><h6 class="mb-0">新增品种</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="quickBreedName" placeholder="品种名称">
+                            <button class="btn btn-success btn-sm" type="button" onclick="quickAddBreed()">添加</button>
+                        </div>
+                        <div id="quickBreedMsg" class="text-danger small mt-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = new bootstrap.Modal('#quickBreedModal');
+    modal.show();
+    const input = document.getElementById('quickBreedName');
+    input.focus();
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') quickAddBreed(); });
+}
+
+async function quickAddBreed() {
+    const name = document.getElementById('quickBreedName').value.trim();
+    if (!name) return;
+    const res = await fetch('/api/breeds', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name})});
+    const d = await res.json();
+    if (d.success) {
+        await loadBreeds();
+        document.getElementById('breed').value = String(d.id);
+        bootstrap.Modal.getInstance('#quickBreedModal').hide();
+        document.getElementById('quickBreedModal').remove();
+    } else {
+        document.getElementById('quickBreedMsg').textContent = d.message || '添加失败';
+    }
+}
+
+async function loadTags() {
+    const res = await fetch('/api/sheep/tags?all=1');
+    const tags = await res.json();
+    let fatherOpts = '', motherOpts = '';
+    for (const t of tags) {
+        if (t.sex === '公') fatherOpts += `<option value="${t.ear_tag}">`;
+        if (t.sex === '母') motherOpts += `<option value="${t.ear_tag}">`;
+    }
+    document.getElementById('fatherList').innerHTML = fatherOpts;
+    document.getElementById('motherList').innerHTML = motherOpts;
+}
+
+async function loadSheep() {
+    if (!sheepId) return;
+    document.getElementById('formTitle').textContent = '编辑羊只';
+    const res = await fetch(`/api/sheep/${sheepId}`);
+    const d = await res.json();
+    const s = d.sheep;
+    document.getElementById('ear_tag').value = s.ear_tag;
+    document.getElementById('electronic_ear_tag').value = s.electronic_ear_tag || '';
+    // 品种可能需要通过name匹配
+    const sel = document.getElementById('breed');
+    for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].dataset.name === s.breed) {
+            sel.value = sel.options[i].value;
+            break;
+        }
+    }
+    document.getElementById('sex').value = s.sex;
+    document.getElementById('birth_date').value = s.birth_date;
+    document.getElementById('father_tag').value = s.father_tag || '';
+    document.getElementById('mother_tag').value = s.mother_tag || '';
+    document.getElementById('source').value = s.source || '';
+    document.getElementById('status').value = s.status;
+    if (s.status_reason) { document.getElementById('statusReason').value = s.status_reason; }
+    if (s.status !== '在群') { document.getElementById('statusReasonRow').style.display = ''; }
+}
+
+document.getElementById('sheepForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const breedSel = document.getElementById('breed');
+    const breedName = breedSel.selectedOptions[0] ? breedSel.selectedOptions[0].dataset.name : '';
+    const data = {
+        ear_tag: document.getElementById('ear_tag').value.trim(),
+        electronic_ear_tag: document.getElementById('electronic_ear_tag').value.trim(),
+        breed: breedName,
+        sex: document.getElementById('sex').value,
+        birth_date: document.getElementById('birth_date').value,
+        father_tag: document.getElementById('father_tag').value.trim(),
+        mother_tag: document.getElementById('mother_tag').value.trim(),
+        source: document.getElementById('source').value.trim(),
+        status: document.getElementById('status').value,
+        status_reason: document.getElementById('statusReason').value.trim()
+    };
+
+    const url = sheepId ? `/api/sheep/${sheepId}` : '/api/sheep';
+    const method = sheepId ? 'PUT' : 'POST';
+    const res = await fetch(url, {method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+    const d = await res.json();
+
+    if (d.success) {
+        window.location.href = '/sheep';
+    } else {
+        const err = document.getElementById('formError');
+        err.textContent = d.message || '保存失败';
+        err.classList.remove('d-none');
+    }
+});
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山羊育种管理平台 - 配种表单</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary: #2d6a4f; }
+        body { background: #f5f7f5; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%); height: 100vh; width: 220px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; border-left: 3px solid transparent; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #95d5b2; }
+        .sidebar .nav-link i { margin-right: 8px; width: 20px; }
+        .main-content { margin-left: 220px; padding: 20px; }
+        .topbar { background: white; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar .nav { display: flex; flex-wrap: wrap; } .main-content { margin-left: 0; } }
+        .lamb-row { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    
+        .sidebar-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.25); color: white; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed h5, .sidebar.collapsed .sidebar-toggle { display: none; }
+        .sidebar.collapsed .sidebar-toggle-collapsed { display: flex; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link i { margin-right: 0; text-align: center; width: 100%; }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+        .sidebar-toggle-collapsed { display: none; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; z-index: 10; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .sidebar.collapsed { width: 100%; } .sidebar.collapsed ~ .main-content { margin-left: 0; } }
+
+    </style>
+</head>
+<body>
+<nav class="sidebar">
+    <button class="sidebar-toggle-collapsed" onclick="document.querySelector('.sidebar').classList.remove('collapsed');localStorage.setItem('sb_clp','0');">↦</button>
+    <div class="px-3 pt-3 pb-2 text-white"><h5 style="font-size:1rem;line-height:1.2;white-space:nowrap;" class="mb-0">山羊育种管理平台</h5></div>
+    <ul class="nav flex-column">
+        <li><a href="/dashboard" class="nav-link"> 数据看板</a></li>
+        <li><a href="/sheep" class="nav-link"> 羊只管理</a></li>
+        <li><a href="/breeding" class="nav-link active"> 配种繁殖</a></li>
+        <li><a href="/measurement" class="nav-link"> 生长测定</a></li>
+        <li><a href="/import" class="nav-link"> 数据导入</a></li>
+    </ul>
+    <div class="mt-auto px-3 pb-3">
+        <hr style="border-color:rgba(255,255,255,0.2);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div><small class="text-white-50" id="currentUser">山羊联合育种管理系统</small><br><small class="text-white-50" id="currentRole" style="font-size:0.7rem;"></small></div>
+            <a href="#" class="btn btn-sm btn-outline-light" onclick="if(confirm('确定退出系统？')){window.close();}">退出</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-content">
+<div class="topbar"><h5 class="mb-0" id="formTitle">新增配繁记录</h5></div>
+<div class="container-fluid mt-3">
+    <div class="card" style="border-radius:12px;border:none;box-shadow:0 2px 8px rgba(0,0,0,0.06);max-width:900px;">
+        <div class="card-body p-4">
+            <form id="breedingForm">
+                <h6 class="text-muted mb-3">繁殖信息</h6>
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label">母羊耳号 <span class="text-danger">*</span></label><input type="text" class="form-control" id="ewe_tag" list="eweList" required><datalist id="eweList"></datalist></div>
+                    <div class="col-md-4"><label class="form-label">公羊耳号</label><input type="text" class="form-control" id="ram_tag" list="ramList"><datalist id="ramList"></datalist></div>
+                    <div class="col-md-4"><label class="form-label">产羔日期 <span class="text-danger">*</span></label><input type="date" class="form-control" id="lambing_date" required></div>
+                    <div class="col-md-3"><label class="form-label">配种日期</label><input type="date" class="form-control" id="mating_date"><small class="text-muted">(自动估算: 产羔-150天)</small></div>
+                    <div class="col-md-3"><label class="form-label">产羔数</label><input type="number" class="form-control" id="total_born" min="0"></div>
+                    <div class="col-md-3"><label class="form-label">活羔数</label><input type="number" class="form-control" id="live_born" min="0"></div>
+                    <div class="col-md-3"><label class="form-label">备注</label><input type="text" class="form-control" id="remark"></div>
+                </div>
+
+                <h6 class="text-muted mt-4 mb-3">羔羊明细 <button type="button" class="btn btn-sm btn-outline-success" onclick="addLamb()"> 添加羔羊</button></h6>
+                <div id="lambsContainer"></div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-success"> 保存</button>
+                    <a href="/breeding" class="btn btn-outline-secondary">取消</a>
+                </div>
+                <div id="formError" class="alert alert-danger d-none mt-3 py-2"></div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script>
+const isEditor = {{ 'true' if session.role != 'user' else 'false' }};
+const recId = {{ rec_id|default('null') }};
+let lambIndex = 0;
+
+async function init() {
+    await loadTags();
+    await loadRec();
+    if (!recId) addLamb();
+}
+
+function addLamb(data = {}) {
+    const idx = lambIndex++;
+    const div = document.createElement('div');
+    div.className = 'lamb-row';
+    div.innerHTML = `<div class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small">耳号</label><input type="text" class="form-control form-control-sm lamb-tag" value="${data.lamb_ear_tag||''}"></div>
+        <div class="col-md-2"><label class="form-label small">性别</label><select class="form-select form-select-sm lamb-sex"><option value="">—</option><option value="公" ${data.sex==='公'?'selected':''}>公</option><option value="母" ${data.sex==='母'?'selected':''}>母</option></select></div>
+        <div class="col-md-2"><label class="form-label small">初生重(kg)</label><input type="number" step="0.01" class="form-control form-control-sm lamb-weight" value="${data.birth_weight||''}"></div>
+        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.lamb-row').remove()" title="删除此羔羊"><i class="bi-trash"></i></button></div>
+    </div>`;
+    document.getElementById('lambsContainer').appendChild(div);
+}
+
+async function loadTags() {
+    const res = await fetch('/api/sheep/tags?all=1');
+    const tags = await res.json();
+    let eweOpts = '', ramOpts = '';
+    for (const t of tags) {
+        if (t.sex === '母') eweOpts += `<option value="${t.ear_tag}">`;
+        if (t.sex === '公') ramOpts += `<option value="${t.ear_tag}">`;
+    }
+    document.getElementById('eweList').innerHTML = eweOpts;
+    document.getElementById('ramList').innerHTML = ramOpts;
+}
+
+async function loadRec() {
+    if (!recId) return;
+    document.getElementById('formTitle').textContent = '编辑配繁记录';
+    const res = await fetch(`/api/breeding/${recId}`);
+    const r = await res.json();
+    document.getElementById('ewe_tag').value = r.ewe_tag;
+    document.getElementById('ram_tag').value = r.ram_tag || '';
+    document.getElementById('mating_date').value = r.mating_date;
+    document.getElementById('lambing_date').value = r.lambing_date;
+    document.getElementById('total_born').value = r.total_born;
+    document.getElementById('live_born').value = r.live_born;
+    document.getElementById('remark').value = r.remark || '';
+    if (r.lambs) { for (const l of r.lambs) addLamb(l); }
+}
+
+document.getElementById('lambing_date').addEventListener('change', function() {
+    const d = this.value;
+    if (d && !document.getElementById('mating_date').value) {
+        const ld = new Date(d);
+        ld.setDate(ld.getDate() - 150);
+        document.getElementById('mating_date').value = ld.toISOString().split('T')[0];
+    }
+});
+
+document.getElementById('breedingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const lambs = [];
+    document.querySelectorAll('.lamb-row').forEach(row => {
+        const tag = row.querySelector('.lamb-tag').value.trim();
+        if (tag) {
+            lambs.push({
+                lamb_ear_tag: tag,
+                sex: row.querySelector('.lamb-sex').value,
+                birth_weight: parseFloat(row.querySelector('.lamb-weight').value) || 0
+            });
+        }
+    });
+
+    const data = {
+        ewe_tag: document.getElementById('ewe_tag').value.trim(),
+        ram_tag: document.getElementById('ram_tag').value.trim(),
+        mating_date: document.getElementById('mating_date').value,
+        lambing_date: document.getElementById('lambing_date').value,
+        total_born: parseInt(document.getElementById('total_born').value) || 0,
+        live_born: parseInt(document.getElementById('live_born').value) || 0,
+        remark: document.getElementById('remark').value.trim(),
+        lambs: lambs
+    };
+
+    const url = recId ? `/api/breeding/${recId}` : '/api/breeding';
+    const method = recId ? 'PUT' : 'POST';
+    const res = await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    const d = await res.json();
+    if (d.success) { window.location.href = '/breeding'; }
+    else {
+        const err = document.getElementById('formError');
+        err.textContent = d.message || '保存失败';
+        err.classList.remove('d-none');
+    }
+});
+
+init();
+</script>
+</body>
+</html>

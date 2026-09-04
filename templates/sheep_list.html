@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山羊育种管理平台 - 羊只管理</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary: #2d6a4f; --primary-light: #40916c; }
+        body { background: #f5f7f5; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%); height: 100vh; width: 220px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; border-left: 3px solid transparent; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #95d5b2; }
+        .sidebar .nav-link i { margin-right: 8px; width: 20px; }
+        .main-content { margin-left: 220px; padding: 20px; }
+        .topbar { background: white; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; }
+        .badge-公 { background: #40916c; }
+        .badge-母 { background: #e07a5f; }
+        .badge-在群 { background: #52b788; }
+        .badge-淘汰 { background: #6c757d; }
+        .badge-死亡 { background: #dc3545; }
+        .badge-出售 { background: #fd7e14; }
+        .btn-action { padding: 2px 8px; font-size: 0.8rem; }
+        .stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar .nav { display: flex; flex-wrap: wrap; } .main-content { margin-left: 0; } }
+    
+        .sidebar-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.25); color: white; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed h5, .sidebar.collapsed .sidebar-toggle { display: none; }
+        .sidebar.collapsed .sidebar-toggle-collapsed { display: flex; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link i { margin-right: 0; text-align: center; width: 100%; }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+        .sidebar-toggle-collapsed { display: none; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; z-index: 10; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .sidebar.collapsed { width: 100%; } .sidebar.collapsed ~ .main-content { margin-left: 0; } }
+
+            .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .sortable:hover { background: #e9ecef; }
+        .sort-arrow { font-size: 0.7rem; margin-left: 2px; }
+
+    </style>
+</head>
+<body>
+<nav class="sidebar">
+    <button class="sidebar-toggle-collapsed" onclick="document.querySelector('.sidebar').classList.remove('collapsed');localStorage.setItem('sb_clp','0');">↦</button>
+    <div class="px-3 pt-3 pb-2 text-white"><h5 style="font-size:1rem;line-height:1.2;white-space:nowrap;" class="mb-0">山羊育种管理平台</h5></div>
+    <ul class="nav flex-column">
+        <li><a href="/dashboard" class="nav-link"> 数据看板</a></li>
+        <li><a href="/sheep" class="nav-link active"> 羊只管理</a></li>
+        <li><a href="/breeding" class="nav-link"> 配种繁殖</a></li>
+        <li><a href="/measurement" class="nav-link"> 生长测定</a></li>
+        <li><a href="/import" class="nav-link"> 数据导入</a></li>
+    </ul>
+    <div class="mt-auto px-3 pb-3">
+        <hr style="border-color:rgba(255,255,255,0.2);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div><small class="text-white-50" id="currentUser">山羊联合育种管理系统</small><br><small class="text-white-50" id="currentRole" style="font-size:0.7rem;"></small></div>
+            <a href="#" class="btn btn-sm btn-outline-light" onclick="if(confirm('确定退出系统？')){window.close();}">退出</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-content">
+<div class="topbar d-flex justify-content-between align-items-center">
+    <h5 class="mb-0"> 羊只管理</h5>
+    <div>
+        {% if session.role != "user" %}<button class="btn btn-sm btn-outline-success me-2" onclick="exportSheep()"> 导出</button>{% endif %}
+        {% if session.role != "user" %}<a href="/sheep/add" class="btn btn-sm btn-success"> 新增羊只</a>{% endif %}
+    </div>
+</div>
+
+<div class="container-fluid mt-3">
+    <div class="card stat-card mb-2" style="border-radius:12px;border:none;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div class="card-body py-1">
+            <div class="row g-1 align-items-center">
+                <div class="col-md-2"><input type="text" class="form-control form-control-sm" id="searchInput" placeholder="搜索耳号/父号/母号..." onkeyup="if(event.key==='Enter')loadSheep(1)"></div>
+                <div class="col-md-1">
+                    <select class="form-select form-select-sm" id="sexFilter" onchange="loadSheep(1)">
+                        <option value="">性别</option><option value="公">公</option><option value="母">母</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <select class="form-select form-select-sm" id="statusFilter" onchange="loadSheep(1)">
+                        <option value="">状态</option><option value="在群">在群</option><option value="淘汰">淘汰</option><option value="死亡">死亡</option><option value="出售">出售</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><input type="date" class="form-control form-control-sm" id="dateFrom" placeholder="出生从"></div>
+                <div class="col-md-2"><input type="date" class="form-control form-control-sm" id="dateTo" placeholder="出生到"></div>
+                <div class="col-md-1"><button class="btn btn-sm btn-outline-secondary w-100" onclick="loadSheep(1)">查询</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="border-radius:12px;border:none;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light"><tr>
+                    <th>耳号</th><th>电子耳号</th><th>品种</th><th>性别</th><th class="sortable" onclick="toggleSort(event)" data-sort="birth_date">出生日期 <span class="sort-arrow"></span></th><th>父号</th><th>母号</th><th>状态</th><th>操作</th>
+                </tr></thead>
+                <tbody id="sheepBody"></tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted" id="pageInfo"></small>
+            <nav><ul class="pagination pagination-sm mb-0" id="pagination"></ul></nav>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script>
+const isEditor = {{ 'true' if session.role != 'user' else 'false' }};
+let currentPage = 1;
+
+async function init() {
+    try {
+    } catch(e) {}
+    loadSheep();
+}
+
+let sortBy = null, sortOrder = 'desc';
+function toggleSort(e) {
+    var col = e.currentTarget.dataset.sort;
+    if (sortBy === col) { sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'; }
+    else { sortBy = col; sortOrder = 'asc'; }
+    document.querySelectorAll('.sort-arrow').forEach(function(s){ s.textContent = ''; });
+    var el = e.currentTarget;
+    el.querySelector('.sort-arrow').textContent = sortOrder === 'asc' ? ' ▲' : ' ▼';
+    loadSheep(1);
+}
+
+async function loadSheep(page = 1) {
+    currentPage = page;
+    const search = document.getElementById('searchInput').value;
+    const sex = document.getElementById('sexFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const params = new URLSearchParams({page, per_page: 200, search, sex, status});
+    if (dateFrom) params.set('start_date', dateFrom);
+    if (dateTo) params.set('end_date', dateTo);
+    if (sortBy) params.set('sort_by', sortBy);
+    if (sortOrder) params.set('sort_order', sortOrder);
+
+    const res = await fetch('/api/sheep?' + params);
+    const d = await res.json();
+
+    let html = '';
+    for (const s of d.items) {
+        html += `<tr>
+            <td><a href="/sheep/${s.id}/card" class="fw-bold text-decoration-none">${s.ear_tag}</a></td>
+            <td>${s.electronic_ear_tag || '—'}</td>
+            <td>${s.breed}</td>
+            <td><span class="badge badge-${s.sex}">${s.sex}</span></td>
+            <td>${s.birth_date || '—'}</td>
+            <td>${s.father_tag || '—'}</td>
+            <td>${s.mother_tag || '—'}</td>
+            <td><span class="badge badge-${s.status}">${s.status}</span>${s.weak ? ' <span class="badge bg-secondary">弱羊</span>' : ''}</td>
+            <td>
+                <a href="/sheep/${s.id}/card" class="btn btn-sm btn-outline-info btn-action" title="档案卡"><i class="bi-file-text"></i></a>
+                ${isEditor ? `<a href="/sheep/${s.id}/edit" class="btn btn-sm btn-outline-primary btn-action" title="编辑"><i class="bi-pencil"></i></a>` : ""}
+                ${isEditor ? `<button class="btn btn-sm btn-outline-danger btn-action" onclick="delSheep(${s.id})" title="删除"><i class="bi-trash"></i></button>` : ""}
+            </td>
+        </tr>`;
+    }
+    document.getElementById('sheepBody').innerHTML = html || '<tr><td colspan="9" class="text-center text-muted py-4">暂无数据</td></tr>';
+    document.getElementById('pageInfo').textContent = `共 ${d.total} 条，第 ${d.page}/${Math.ceil(d.total/d.per_page) || 1} 页`;
+
+    // 分页
+    const totalPages = Math.ceil(d.total / d.per_page) || 1;
+    let pagHtml = '';
+    for (let i = 1; i <= totalPages; i++) {
+        pagHtml += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="#" onclick="loadSheep(${i})">${i}</a></li>`;
+    }
+    document.getElementById('pagination').innerHTML = pagHtml;
+}
+
+async function delSheep(id) {
+    if (!confirm('确定删除这只羊吗？关联的测定数据也会被删除。')) return;
+    await fetch(`/api/sheep/${id}`, {method: 'DELETE'});
+    loadSheep(currentPage);
+}
+
+function exportSheep() {
+    window.open('/api/export/sheep');
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,444 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山羊育种管理平台 - 数据看板</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary: #2d6a4f; --primary-light: #40916c; }
+        body { background: #f5f7f5; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        .navbar-brand { font-weight: 700; color: white !important; }
+        .sidebar { background: linear-gradient(180deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%); height: 100vh; width: 220px; position: fixed; left: 0; top: 0; z-index: 1000; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; font-size: 0.95rem; border-left: 3px solid transparent; transition: all 0.2s; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #95d5b2; }
+        .sidebar .nav-link i { margin-right: 8px; width: 20px; text-align: center; }
+        .main-content { margin-left: 220px; padding: 20px; }
+        .topbar { background: white; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; position: sticky; top: 0; z-index: 999; }
+        .stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s; background: #fff; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card .icon-circle { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+        .stat-card .stat-value { font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
+        .stat-card .stat-label { font-size: 0.85rem; color: #6c757d; }
+        .card-header { background: white; border-bottom: 1px solid #eee; font-weight: 600; }
+        .table th { font-weight: 600; font-size: 0.85rem; white-space: nowrap; }
+        .table td { font-size: 0.88rem; }
+        /* 标题横幅 */
+        .page-banner { background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%); border-radius: 14px; padding: 22px 28px; color: white; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .page-banner h4 { margin: 0; font-weight: 700; }
+        .page-banner .sub { opacity: 0.85; font-size: 0.9rem; margin-top: 4px; }
+        .page-banner .total-box { text-align: right; }
+        .page-banner .total-num { font-size: 2.6rem; font-weight: 800; line-height: 1; }
+        .page-banner .total-label { font-size: 0.85rem; opacity: 0.85; }
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; height: auto; position: relative; }
+            .sidebar .nav { display: flex; flex-wrap: wrap; }
+            .sidebar .nav-link { padding: 8px 12px; font-size: 0.8rem; border-left: none; border-bottom: 2px solid transparent; }
+            .main-content { margin-left: 0; }
+            .page-banner .total-box { text-align: left; }
+        }
+    
+        .sidebar-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.25); color: white; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed h5, .sidebar.collapsed .sidebar-toggle { display: none; }
+        .sidebar.collapsed .sidebar-toggle-collapsed { display: flex; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link i { margin-right: 0; text-align: center; width: 100%; }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+        .sidebar-toggle-collapsed { display: none; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; z-index: 10; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .sidebar.collapsed { width: 100%; } .sidebar.collapsed ~ .main-content { margin-left: 0; } }
+
+    </style>
+</head>
+<body>
+
+<!-- 侧边栏 -->
+<nav class="sidebar">
+    <button class="sidebar-toggle-collapsed" onclick="document.querySelector('.sidebar').classList.remove('collapsed');localStorage.setItem('sb_clp','0');">↦</button>
+    <div class="px-3 pt-3 pb-2 text-white">
+        <h5 class="mb-0" style="font-size:1rem;line-height:1.2;">山羊育种管理平台</h5>
+    </div>
+    <ul class="nav flex-column">
+        <li><a href="/dashboard" class="nav-link active"> 数据看板</a></li>
+        <li><a href="/sheep" class="nav-link"> 羊只管理</a></li>
+        <li><a href="/breeding" class="nav-link"> 配种繁殖</a></li>
+        <li><a href="/measurement" class="nav-link"> 生长测定</a></li>
+        <li><a href="/import" class="nav-link"> 数据导入</a></li>
+    </ul>
+    <div class="mt-auto px-3 pb-3">
+        <hr style="border-color:rgba(255,255,255,0.2);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div><small class="text-white-50" id="currentUser">山羊联合育种管理系统</small><br><small class="text-white-50" id="currentRole" style="font-size:0.7rem;"></small></div>
+            <a href="#" class="btn btn-sm btn-outline-light" onclick="if(confirm('确定退出系统？')){window.close();}">退出</a>
+        </div>
+    </div>
+</nav>
+
+<!-- 主内容 -->
+<div class="main-content">
+    <div class="topbar d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">数据看板</h5>
+        <div>
+            <span class="text-muted small" id="todayDate"></span>
+        </div>
+    </div>
+
+    <div class="container-fluid mt-3">
+        <!-- 标题横幅 + 总数 -->
+        <div class="page-banner mb-3">
+            <div>
+                <h4>山羊育种管理平台</h4>
+                <div class="sub">在群羊只存栏总览 · 性能测定统计</div>
+            </div>
+            <div class="total-box">
+                <div class="total-num" id="totalSheep">0</div>
+                <div class="total-label">在群羊只总数（只）</div>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3">
+                <div class="card stat-card h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-circle bg-success bg-opacity-10 me-3" style="display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🐐</div>
+                        <div>
+                            <div class="stat-value" id="ramCount">0</div>
+                            <div class="stat-label">种公羊（配种）</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-circle bg-danger bg-opacity-10 me-3" style="display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🐐</div>
+                        <div>
+                            <div class="stat-value" id="eweCount">0</div>
+                            <div class="stat-label">基础母羊（产羔）</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-circle bg-info bg-opacity-10 me-3" style="display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🐐</div>
+                        <div>
+                            <div class="stat-value" id="breedingTotal">0</div>
+                            <div class="stat-label">配种记录</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-circle bg-warning bg-opacity-10 me-3" style="display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🐐</div>
+                        <div>
+                            <div class="stat-value" id="lambTotal">0</div>
+                            <div class="stat-label">羔羊记录</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 测定统计 + 性别分布 + 羊群结构 -->
+        <div class="row g-3 mb-3">
+            <div class="col-lg-4">
+                <div class="card stat-card h-100">
+                    <div class="card-header">各阶段测定统计</div>
+                    <div class="card-body p-2">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0 small">
+                                <thead><tr><th>阶段</th><th>测定数</th><th>平均体重(kg)</th></tr></thead>
+                                <tbody id="stageStatsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card stat-card h-100">
+                    <div class="card-header">性别分布</div>
+                    <div class="card-body p-2" id="sexChartCard" style="height:240px;">
+                        <canvas id="sexChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card stat-card h-100">
+                    <div class="card-header">羊群结构</div>
+                    <div class="card-body p-2" id="flockChartCard" style="height:240px;">
+                        <canvas id="flockChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 品种汇总 -->
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="card stat-card">
+                    <div class="card-header">品种存栏汇总</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead><tr><th>品种</th><th>公羊</th><th>母羊</th><th>合计</th></tr></thead>
+                                <tbody id="breedStatsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 测定预警 -->
+    <div class="row g-3 mt-3">
+        <div class="col-12">
+            <div class="card stat-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>测定提醒 <small class="text-muted fw-normal">（当月达到待测月龄 + 上月需测未测；弱羊/非在群不提醒）</small></span>
+                    <span class="badge bg-warning" id="alertTotal">0</span>
+                </div>
+                <div class="card-body">
+                    <div id="alertEmpty" class="text-muted small d-none mb-2">当前没有需要提醒的测定任务 🎉</div>
+                    <div class="row" id="alertGroups"></div>
+                    <!-- 历史漏测待补测 -->
+                    <div class="mt-3">
+                        <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" href="#historyMissingBox" role="button" aria-expanded="false" aria-controls="historyMissingBox">
+                            历史漏测待补测 <span class="badge bg-secondary" id="historyCount">0</span>
+                            <small class="text-muted">（早期阶段漏测，需先补测）</small>
+                        </a>
+                        <div class="collapse mt-2" id="historyMissingBox">
+                            <div class="border rounded p-2" style="max-height:300px;overflow:auto;" id="historyMissingList"></div>
+                        </div>
+                    </div>
+                    <div class="text-muted small mt-2">仅提醒，不自动淘汰；超期羊只请在「羊只管理」中手动调整状态。</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script>
+const isEditor = {{ 'true' if session.role != 'user' else 'false' }};
+// 今天日期
+const now = new Date();
+const weekDays = ['日','一','二','三','四','五','六'];
+document.getElementById('todayDate').textContent =
+    `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 星期${weekDays[now.getDay()]}`;
+// 高亮当前菜单
+document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+    if (link.href === location.href || location.pathname === link.getAttribute('href')) {
+        link.classList.add('active');
+    }
+});
+// 管理员菜单（修复：原代码在普通作用域误用 await，导致脚本报错）
+
+
+function fmt(v) {
+    if (v === null || v === undefined || v === 0) return '—';
+    return v;
+}
+
+async function loadDashboard() {
+    try {
+        const res = await fetch('/api/dashboard');
+        const d = await res.json();
+
+        document.getElementById('totalSheep').textContent = d.total_sheep || 0;
+        document.getElementById('ramCount').textContent = d.ram_count || 0;
+        document.getElementById('eweCount').textContent = d.ewe_count || 0;
+        document.getElementById('breedingTotal').textContent = d.breeding_total || 0;
+        document.getElementById('lambTotal').textContent = d.lamb_total || 0;
+
+        // 阶段统计
+        const stages = ['初生', '3月龄', '6月龄', '12月龄'];
+        let html = '';
+        for (const st of stages) {
+            const s = d.stage_stats[st] || {count: 0, avg_weight: 0};
+            html += `<tr><td>${st}</td><td>${s.count}</td><td>${fmt(s.avg_weight)}</td></tr>`;
+        }
+        document.getElementById('stageStatsBody').innerHTML = html || '<tr><td colspan="3" class="text-muted">暂无数据</td></tr>';
+
+        // 品种汇总
+        let bhtml = '';
+        for (const b of (d.breed_stats || [])) {
+            bhtml += `<tr><td>${b.breed}</td><td>${b['公'] || 0}</td><td>${b['母'] || 0}</td><td>${b.total}</td></tr>`;
+        }
+        document.getElementById('breedStatsBody').innerHTML = bhtml || '<tr><td colspan="4" class="text-muted">暂无数据</td></tr>';
+
+        // 图表渲染 — 纯 Canvas API
+        function drawSexChart(data) {
+            var c = document.getElementById('sexChart');
+            var ctx = c.getContext('2d');
+            c.width = c.parentElement.clientWidth - 16;
+            c.height = 240;
+            var total = data.reduce(function(a,b){return a+b.cnt;},0) || 1;
+            var colors = ['#40916c','#e07a5f','#ffc107','#6c757d'];
+            var labels = data.map(function(r){return r.sex === '公' ? '公羊' : r.sex === '母' ? '母羊' : r.sex;});
+            var cx = c.width/2, cy = c.height/2 - 5;
+            var r = Math.min(cx, cy) - 20;
+            var a = -Math.PI/2;
+            data.forEach(function(d,i){
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                var slice = (d.cnt/total)*Math.PI*2;
+                ctx.arc(cx, cy, r, a, a+slice);
+                ctx.fillStyle = colors[i%colors.length];
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                var midA = a + slice/2;
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 12px sans-serif';
+                var pStr = Math.round(d.cnt/total*100) + '%';
+                ctx.fillText(d.cnt, cx+Math.cos(midA)*r*0.65-12, cy+Math.sin(midA)*r*0.65+4);
+                a += slice;
+            });
+            // legend
+            ctx.font = '11px sans-serif';
+            var lx = 8, ly = c.height - 8;
+            data.forEach(function(d,i){
+                var pct = Math.round(d.cnt/total*100);
+                var t = labels[i] + ' ' + d.cnt + ' (' + pct + '%)';
+                var tw = ctx.measureText(t).width;
+                ctx.fillStyle = colors[i%colors.length];
+                ctx.fillRect(lx, ly-9, 10, 10);
+                ctx.fillStyle = '#333';
+                ctx.fillText(t, lx+14, ly);
+                lx += tw + 20;
+            });
+        }
+        function drawFlockChart(data) {
+            var c = document.getElementById('flockChart');
+            var ctx = c.getContext('2d');
+            c.width = c.parentElement.clientWidth - 16;
+            c.height = 240;
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, c.width, c.height);
+            var f = data || {};
+            var total = (f.ram_breeding||0) + (f.ewe_breeding||0) + (f.young||0) || 1;
+            var items = [
+                {label: '繁殖公羊', v: f.ram_breeding||0, color: '#52b788'},
+                {label: '繁殖母羊', v: f.ewe_breeding||0, color: '#2d6a4f'},
+                {label: '育成羊',   v: f.young||0,        color: '#74c69d'}
+            ];
+            var chartH = c.height - 60;
+            var baseY = c.height - 30;
+            var barW = Math.min(c.width / 4 - 12, 80);
+            items.forEach(function(item, i){
+                var x = c.width * (i + 0.5) / 3 - barW/2;
+                var pct = item.v / total;
+                var bh = pct * chartH;
+                // 背景
+                ctx.fillStyle = '#e9ecef';
+                ctx.fillRect(x, 20, barW, chartH);
+                // 实柱
+                ctx.fillStyle = item.color;
+                ctx.fillRect(x, baseY-bh, barW, bh);
+                // 数值（柱顶上）
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 12px sans-serif';
+                var numTxt = item.v + ' (' + (pct*100).toFixed(1) + '%)';
+                var numW = ctx.measureText(numTxt).width;
+                ctx.fillText(numTxt, x+barW/2-numW/2, baseY-bh-6);
+                // 标签（柱底）
+                ctx.font = '11px sans-serif';
+                var labW = ctx.measureText(item.label).width;
+                ctx.fillText(item.label, x+barW/2-labW/2, baseY+14);
+            });
+            // Y轴百分刻度（仅参考：0% 和 50%）
+            ctx.strokeStyle = '#dee2e6';
+            ctx.font = '9px sans-serif';
+            ctx.fillStyle = '#888';
+            [0.5, 1.0].forEach(function(p){
+                var y = baseY - p * chartH;
+                ctx.beginPath();
+                ctx.setLineDash([2,2]);
+                ctx.moveTo(8, y);
+                ctx.lineTo(c.width - 8, y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillText(Math.round(p*100) + '%', 8, y - 3);
+            });
+        }
+        // 核对 canvas 和容器
+        var sc = document.getElementById('sexChartCard');
+        var fc = document.getElementById('flockChartCard');
+        if (!sc || !fc || !document.getElementById('sexChart').getContext) {
+            document.getElementById('sexChartCard').innerHTML = '<div style=\"padding:20px;color:#999;\">Canvas 不可用</div>';
+            document.getElementById('flockChartCard').innerHTML = '<div style=\"padding:20px;color:#999;\">Canvas 不可用</div>';
+        } else {
+            drawSexChart(d.sex_dist);
+            drawFlockChart(d.flock_structure);
+        }
+    } catch (e) {
+        console.error('加载看板数据失败', e);
+    }
+}
+
+// 侧栏收缩切换
+(function(){var sb=document.querySelector('.sidebar');var bt=document.createElement('button');bt.className='sidebar-toggle';bt.innerHTML='↤';bt.title='收缩菜单';bt.onclick=function(){sb.classList.toggle('collapsed');localStorage.setItem('sb_clp',sb.classList.contains('collapsed')?'1':'0');};sb.appendChild(bt);if(localStorage.getItem('sb_clp')==='1')sb.classList.add('collapsed');})();
+
+loadDashboard();
+
+async function loadAlerts() {
+    try {
+        const res = await fetch('/api/measurement_alerts');
+        const d = await res.json();
+        document.getElementById('alertTotal').textContent = d.total || 0;
+        const emptyEl = document.getElementById('alertEmpty');
+        const groupsEl = document.getElementById('alertGroups');
+        if (!d.total) {
+            emptyEl.classList.remove('d-none');
+            groupsEl.innerHTML = '';
+        } else {
+            emptyEl.classList.add('d-none');
+            const stages = ['初生', '3月龄', '6月龄', '12月龄'];
+            let html = '';
+            for (const st of stages) {
+                const list = d.grouped[st] || [];
+                if (!list.length) continue;
+                const items = list.map(a => {
+                    const miss = (a.missing_early && a.missing_early.length)
+                        ? ` <span class="badge bg-danger-subtle text-danger">缺:${a.missing_early.join('/')}</span>` : '';
+                    return `<div class="mb-1"><a href="/sheep/${a.sheep_id}/card" class="fw-bold text-decoration-none">${a.ear_tag}</a> <span class="text-muted small">到期 ${a.due_date}</span>${miss}</div>`;
+                }).join('');
+                html += `<div class="col-lg-3 col-md-6 mb-2">
+                    <div class="border rounded p-2 h-100">
+                        <div class="fw-bold mb-1">${st} <span class="badge bg-warning ms-1">${list.length}</span></div>
+                        <div style="max-height:220px;overflow:auto;">${items}</div>
+                    </div>
+                </div>`;
+            }
+            groupsEl.innerHTML = html;
+        }
+        // 历史漏测待补测清单
+        document.getElementById('historyCount').textContent = d.history_count || 0;
+        const hEl = document.getElementById('historyMissingList');
+        const hList = d.history_missing || [];
+        if (!hList.length) {
+            hEl.innerHTML = '<div class="text-muted small">无历史漏测 🎉</div>';
+        } else {
+            hEl.innerHTML = hList.map(h =>
+                `<div class="mb-1"><a href="/sheep/${h.sheep_id}/card" class="fw-bold text-decoration-none">${h.ear_tag}</a> <span class="badge bg-secondary">${h.stage}</span> <span class="text-muted small">应测 ${h.due_date}（已超 ${h.overdue} 天）</span></div>`
+            ).join('');
+        }
+    } catch (e) {
+        console.error('加载测定预警失败', e);
+    }
+}
+
+// 自动淘汰功能已移除（详见 api_measurement_alerts，仅提醒不淘汰）
+loadAlerts();
+</script>
+</body>
+</html>

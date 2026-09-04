@@ -1,0 +1,292 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山羊育种管理平台 - 测定表单</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary: #2d6a4f; }
+        body { background: #f5f7f5; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%); height: 100vh; width: 220px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; border-left: 3px solid transparent; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #95d5b2; }
+        .sidebar .nav-link i { margin-right: 8px; width: 20px; }
+        .main-content { margin-left: 220px; padding: 20px; }
+        .topbar { background: white; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar .nav { display: flex; flex-wrap: wrap; } .main-content { margin-left: 0; } }
+    
+        .sidebar-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.25); color: white; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed h5, .sidebar.collapsed .sidebar-toggle { display: none; }
+        .sidebar.collapsed .sidebar-toggle-collapsed { display: flex; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link i { margin-right: 0; text-align: center; width: 100%; }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+        .sidebar-toggle-collapsed { display: none; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; z-index: 10; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .sidebar.collapsed { width: 100%; } .sidebar.collapsed ~ .main-content { margin-left: 0; } }
+
+    </style>
+</head>
+<body>
+<nav class="sidebar">
+    <button class="sidebar-toggle-collapsed" onclick="document.querySelector('.sidebar').classList.remove('collapsed');localStorage.setItem('sb_clp','0');">↦</button>
+    <div class="px-3 pt-3 pb-2 text-white"><h5 style="font-size:1rem;line-height:1.2;white-space:nowrap;" class="mb-0">山羊育种管理平台</h5></div>
+    <ul class="nav flex-column">
+        <li><a href="/dashboard" class="nav-link"> 数据看板</a></li>
+        <li><a href="/sheep" class="nav-link"> 羊只管理</a></li>
+        <li><a href="/breeding" class="nav-link"> 配种繁殖</a></li>
+        <li><a href="/measurement" class="nav-link active"> 生长测定</a></li>
+        <li><a href="/import" class="nav-link"> 数据导入</a></li>
+    </ul>
+    <div class="mt-auto px-3 pb-3">
+        <hr style="border-color:rgba(255,255,255,0.2);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div><small class="text-white-50" id="currentUser">山羊联合育种管理系统</small><br><small class="text-white-50" id="currentRole" style="font-size:0.7rem;"></small></div>
+            <a href="#" class="btn btn-sm btn-outline-light" onclick="if(confirm('确定退出系统？')){window.close();}">退出</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-content">
+<div class="topbar"><h5 class="mb-0">新增测定记录</h5></div>
+<div class="container-fluid mt-3">
+    <div class="card" style="border-radius:12px;border:none;box-shadow:0 2px 8px rgba(0,0,0,0.06);max-width:800px;">
+        <div class="card-body p-4">
+            <form id="measForm">
+                <div class="row g-3">
+                    <div class="col-md-6"><label class="form-label">羊只 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="sheep_tag" list="sheepList" placeholder="输入或选择耳号..." required autocomplete="off">
+                        <datalist id="sheepList"></datalist>
+                    </div>
+                    <div class="col-md-3"><label class="form-label">阶段 <span class="text-danger">*</span></label>
+                        <select class="form-select" id="stage" required><option value="">请选择</option><option value="初生">初生</option><option value="3月龄">3月龄</option><option value="6月龄">6月龄</option><option value="12月龄">12月龄</option></select>
+                    </div>
+                    <div class="col-md-3"><label class="form-label">测定日期</label><input type="date" class="form-control" id="measure_date"></div>
+                    <div class="col-md-3"><label class="form-label">判定</label>
+                        <select class="form-select" id="judgment">
+                            <option value="正常">正常</option>
+                            <option value="弱羊">弱羊</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 新羊亲本信息区（默认隐藏） -->
+                <div id="newSheepParent" style="display:none;">
+                    <hr class="my-2">
+                    <div class="alert alert-info py-2 mb-2 small">该羊只尚未录入系统，请补充亲本信息（系统将自动创建配种记录）</div>
+                    <div class="row g-2">
+                        <div class="col-md-3"><label class="form-label small">出生日期 <span class="text-danger">*</span></label><input type="date" class="form-control form-control-sm" id="new_birth_date"></div>
+                        <div class="col-md-2"><label class="form-label small">品种</label>
+                            <div class="input-group input-group-sm">
+                                <select class="form-select form-select-sm" id="new_breed">
+                                    {% for b in breeds %}<option value="{{ b.name }}">{{ b.name }}</option>{% else %}<option value="努比亚山羊">努比亚山羊</option>{% endfor %}
+                                </select>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" title="新增品种" onclick="showQuickAddBreedMeas()">＋</button>
+                            </div>
+                        </div>
+                        <div class="col-md-2"><label class="form-label small">性别 <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="new_sex"><option value="公">公</option><option value="母" selected>母</option></select>
+                        </div>
+                        <div class="col-md-2"><label class="form-label small">父号</label><input type="text" class="form-control form-control-sm" id="new_father" placeholder="公羊耳号"></div>
+                        <div class="col-md-3"><label class="form-label small">母号 <span class="text-danger">*</span></label><input type="text" class="form-control form-control-sm" id="new_mother" placeholder="母羊耳号"></div>
+                    </div>
+                </div>
+                <h6 class="text-muted mt-3 mb-2">体尺体重数据</h6>
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label">体重(kg)</label><input type="number" step="0.01" class="form-control" id="weight"></div>
+                    <div class="col-md-4"><label class="form-label">体高(cm)</label><input type="number" step="0.1" class="form-control" id="body_height"></div>
+                    <div class="col-md-4"><label class="form-label">体斜长(cm)</label><input type="number" step="0.1" class="form-control" id="body_length"></div>
+                    <div class="col-md-4"><label class="form-label">胸围(cm)</label><input type="number" step="0.1" class="form-control" id="chest_girth"></div>
+                    <div class="col-md-4"><label class="form-label">管围(cm)</label><input type="number" step="0.1" class="form-control" id="cannon_circumference"></div>
+                    <div class="col-md-4"><label class="form-label">臀宽(cm)</label><input type="number" step="0.1" class="form-control" id="hip_width"></div>
+                    <div class="col-md-4"><label class="form-label">睾丸围(cm) <small class="text-muted">(公羊)</small></label><input type="number" step="0.1" class="form-control" id="testis_circumference"></div>
+                    <div class="col-md-4"><label class="form-label">睾丸直径(cm) <small class="text-muted">(公羊)</small></label><input type="number" step="0.1" class="form-control" id="testis_diameter"></div>
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-success"> 保存</button>
+                    <a href="/measurement" class="btn btn-outline-secondary">取消</a>
+                </div>
+                <div id="formError" class="alert alert-danger d-none mt-3 py-2"></div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script>
+const isEditor = {{ 'true' if session.role != 'user' else 'false' }};
+let editMeasId = null;
+let allTags = [];
+
+const urlParams = new URLSearchParams(window.location.search);
+const prefillSheepId = urlParams.get('sheep_id');
+const prefillStage = urlParams.get('stage');
+const editId = urlParams.get('edit');
+
+async function init() {
+    await loadSheepSelect();
+    await applyPrefill();
+}
+
+// 监听新羊输入 + 搜索建议
+var _debounceTimer = null;
+document.getElementById('sheep_tag').addEventListener('input', function() {
+    var val = this.value.trim();
+    var exists = allTags.some(function(t) { return t.ear_tag === val; });
+    document.getElementById('newSheepParent').style.display = (val && !exists) ? '' : 'none';
+    // 防抖搜索建议
+    clearTimeout(_debounceTimer);
+    if (val && !exists) {
+        _debounceTimer = setTimeout(function() { loadSheepSelect(val); }, 200);
+    }
+});
+
+async function loadSheepSelect(q) {
+    var url = '/api/sheep/tags' + (q ? '?q=' + encodeURIComponent(q) : '');
+    var res = await fetch(url);
+    allTags = await res.json();
+    var list = document.getElementById('sheepList');
+    list.innerHTML = '';
+    for (var i = 0; i < allTags.length; i++) {
+        var t = allTags[i];
+        list.innerHTML += '<option value="' + t.ear_tag + '">' + t.ear_tag + ' (' + t.sex + ')</option>';
+    }
+}
+
+async function applyPrefill() {
+    if (editId) {
+        editMeasId = parseInt(editId);
+        document.querySelector('.topbar h5').textContent = '编辑测定记录';
+        var res = await fetch('/api/measurement/' + editId);
+        var m = await res.json();
+        if (m.error) return;
+        var sRes = await fetch('/api/sheep?per_page=5000');
+        var sData = await sRes.json();
+        var sheep = (sData.items || []).find(function(s) { return s.id === m.sheep_id; });
+        if (sheep) document.getElementById('sheep_tag').value = sheep.ear_tag;
+        document.getElementById('stage').value = m.stage;
+        document.getElementById('measure_date').value = m.measure_date || '';
+        document.getElementById('judgment').value = m.judgment || '正常';
+        document.getElementById('weight').value = m.weight || '';
+        document.getElementById('body_height').value = m.body_height || '';
+        document.getElementById('body_length').value = m.body_length || '';
+        document.getElementById('chest_girth').value = m.chest_girth || '';
+        document.getElementById('cannon_circumference').value = m.cannon_circumference || '';
+        document.getElementById('hip_width').value = m.hip_width || '';
+        document.getElementById('testis_circumference').value = m.testis_circumference || '';
+        document.getElementById('testis_diameter').value = m.testis_diameter || '';
+        return;
+    }
+    if (prefillSheepId) {
+        var sRes2 = await fetch('/api/sheep?per_page=5000');
+        var sData2 = await sRes2.json();
+        var sheep2 = (sData2.items || []).find(function(s) { return String(s.id) === prefillSheepId; });
+        if (sheep2) document.getElementById('sheep_tag').value = sheep2.ear_tag;
+    }
+    if (prefillStage) {
+        document.getElementById('stage').value = prefillStage;
+        document.querySelector('.topbar h5').textContent = '添加测定 — ' + prefillStage;
+    }
+}
+
+document.getElementById('measForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var earTag = document.getElementById('sheep_tag').value.trim();
+    if (!earTag) return;
+
+    var sheepId = null;
+    for (var i = 0; i < allTags.length; i++) { if (allTags[i].ear_tag === earTag) { sheepId = allTags[i].id; break; } }
+    var isNewSheep = !sheepId && !editMeasId;
+
+    var data = {
+        ear_tag: earTag,
+        sheep_id: sheepId,
+        stage: document.getElementById('stage').value,
+        weight: parseFloat(document.getElementById('weight').value) || 0,
+        body_height: parseFloat(document.getElementById('body_height').value) || 0,
+        body_length: parseFloat(document.getElementById('body_length').value) || 0,
+        chest_girth: parseFloat(document.getElementById('chest_girth').value) || 0,
+        cannon_circumference: parseFloat(document.getElementById('cannon_circumference').value) || 0,
+        hip_width: parseFloat(document.getElementById('hip_width').value) || 0,
+        testis_circumference: parseFloat(document.getElementById('testis_circumference').value) || 0,
+        testis_diameter: parseFloat(document.getElementById('testis_diameter').value) || 0,
+        measure_date: document.getElementById('measure_date').value,
+        judgment: document.getElementById('judgment').value
+    };
+    // 新羊附加亲本信息
+    if (isNewSheep) {
+        data.new_birth_date = document.getElementById('new_birth_date').value;
+        data.new_breed = document.getElementById('new_breed').value;
+        data.new_sex = document.getElementById('new_sex').value;
+        data.new_father = document.getElementById('new_father').value.trim();
+        data.new_mother = document.getElementById('new_mother').value.trim();
+    }
+
+    var url = editMeasId ? '/api/measurement/' + editMeasId : '/api/measurement';
+    var method = editMeasId ? 'PUT' : 'POST';
+
+    var r = await fetch(url, {method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+    var d = await r.json();
+    if (d.success) { window.location.href = '/measurement'; }
+    else {
+        var errEl = document.getElementById('formError');
+        errEl.textContent = d.message || '保存失败';
+        errEl.classList.remove('d-none');
+    }
+});
+
+// 所有登录用户均可即时新增品种（测定表单：新建羊只时补充品种）
+async function showQuickAddBreedMeas() {
+    const html = `
+        <div class="modal fade" id="quickBreedModalMeas" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <div class="modal-header"><h6 class="mb-0">新增品种</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" id="quickBreedNameMeas" placeholder="品种名称">
+                            <button class="btn btn-success btn-sm" type="button" onclick="quickAddBreedMeasSubmit()">添加</button>
+                        </div>
+                        <div id="quickBreedMsgMeas" class="text-danger small mt-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    const modal = new bootstrap.Modal('#quickBreedModalMeas');
+    modal.show();
+    const input = document.getElementById('quickBreedNameMeas');
+    input.focus();
+    input.addEventListener('keydown', function(e){ if (e.key === 'Enter') quickAddBreedMeasSubmit(); });
+}
+async function quickAddBreedMeasSubmit() {
+    const name = document.getElementById('quickBreedNameMeas').value.trim();
+    if (!name) return;
+    const res = await fetch('/api/breeds', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name: name})});
+    const d = await res.json();
+    if (d.success) {
+        await refreshNewBreed(name);
+        bootstrap.Modal.getInstance('#quickBreedModalMeas').hide();
+        document.getElementById('quickBreedModalMeas').remove();
+    } else {
+        document.getElementById('quickBreedMsgMeas').textContent = d.message || '添加失败';
+    }
+}
+async function refreshNewBreed(sel) {
+    try {
+        const res = await fetch('/api/breeds');
+        const bs = await res.json();
+        const selEl = document.getElementById('new_breed');
+        selEl.innerHTML = (bs.map(function(b){return '<option value="'+b.name+'">'+b.name+'</option>';}).join('')) || '<option value="努比亚山羊">努比亚山羊</option>';
+        if (sel) selEl.value = sel;
+    } catch(e) {}
+}
+
+init();
+</script>
+<script src="/static/bootstrap.bundle.min.js"></script>
+</body>
+</html>

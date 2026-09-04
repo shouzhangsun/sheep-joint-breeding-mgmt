@@ -1,0 +1,187 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山羊育种管理平台 - 配种繁殖</title>
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --primary: #2d6a4f; }
+        body { background: #f5f7f5; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; }
+        .sidebar { background: linear-gradient(180deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%); height: 100vh; width: 220px; position: fixed; left: 0; top: 0; display: flex; flex-direction: column; overflow-y: auto; }
+        .sidebar .nav-link { color: rgba(255,255,255,0.8); padding: 12px 20px; border-left: 3px solid transparent; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); border-left-color: #95d5b2; }
+        .sidebar .nav-link i { margin-right: 8px; width: 20px; }
+        .main-content { margin-left: 220px; padding: 20px; }
+        .topbar { background: white; padding: 12px 20px; border-bottom: 1px solid #e0e0e0; }
+        .card-custom { border-radius:12px; border:none; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+        @media (max-width: 768px) { .sidebar { width: 100%; height: auto; position: relative; } .sidebar .nav { display: flex; flex-wrap: wrap; } .main-content { margin-left: 0; } }
+    
+        .sidebar-toggle { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 10; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.25); color: white; }
+        .sidebar.collapsed { width: 60px; }
+        .sidebar.collapsed h5, .sidebar.collapsed .sidebar-toggle { display: none; }
+        .sidebar.collapsed .sidebar-toggle-collapsed { display: flex; }
+        .sidebar.collapsed .nav-link span { display: none; }
+        .sidebar.collapsed .nav-link i { margin-right: 0; text-align: center; width: 100%; }
+        .sidebar.collapsed ~ .main-content { margin-left: 60px; }
+        .sidebar-toggle-collapsed { display: none; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border: none; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); border-radius: 4px; cursor: pointer; font-size: 14px; z-index: 10; align-items: center; justify-content: center; }
+        @media (max-width: 768px) { .sidebar.collapsed { width: 100%; } .sidebar.collapsed ~ .main-content { margin-left: 0; } }
+
+            .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .sortable:hover { background: #e9ecef; }
+        .sort-arrow { font-size: 0.7rem; margin-left: 2px; }
+
+    </style>
+</head>
+<body>
+<nav class="sidebar">
+    <button class="sidebar-toggle-collapsed" onclick="document.querySelector('.sidebar').classList.remove('collapsed');localStorage.setItem('sb_clp','0');">↦</button>
+    <div class="px-3 pt-3 pb-2 text-white"><h5 style="font-size:1rem;line-height:1.2;white-space:nowrap;" class="mb-0">山羊育种管理平台</h5></div>
+    <ul class="nav flex-column">
+        <li><a href="/dashboard" class="nav-link"> 数据看板</a></li>
+        <li><a href="/sheep" class="nav-link"> 羊只管理</a></li>
+        <li><a href="/breeding" class="nav-link active"> 配种繁殖</a></li>
+        <li><a href="/measurement" class="nav-link"> 生长测定</a></li>
+        <li><a href="/import" class="nav-link"> 数据导入</a></li>
+    </ul>
+    <div class="mt-auto px-3 pb-3">
+        <hr style="border-color:rgba(255,255,255,0.2);">
+        <div class="d-flex justify-content-between align-items-center">
+            <div><small class="text-white-50" id="currentUser">山羊联合育种管理系统</small><br><small class="text-white-50" id="currentRole" style="font-size:0.7rem;"></small></div>
+            <a href="#" class="btn btn-sm btn-outline-light" onclick="if(confirm('确定退出系统？')){window.close();}">退出</a>
+        </div>
+    </div>
+</nav>
+
+<div class="main-content">
+<div class="topbar d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">配种繁殖记录</h5>
+    <div>
+        {% if session.role != "user" %}<button class="btn btn-sm btn-outline-success me-2" onclick="exportData()"> 导出</button>{% endif %}
+        {% if session.role != "user" %}<a href="/breeding/add" class="btn btn-sm btn-success"> 新增配繁</a>{% endif %}
+    </div>
+</div>
+
+<div class="container-fluid mt-3">
+    <div class="card card-custom mb-2"><div class="card-body py-1"><div class="row g-1">
+        <div class="col-md-3"><input type="text" class="form-control form-control-sm" id="searchInput" placeholder="搜索母羊/公羊耳号..." onkeyup="if(event.key==='Enter')loadData(1)"></div>
+        <div class="col-md-1"><button class="btn btn-sm btn-outline-secondary w-100" onclick="loadData(1)">查询</button></div>
+    </div></div></div>
+
+    <div class="card card-custom">
+        <div class="table-responsive"><table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>母羊</th><th>公羊</th><th class="sortable" onclick="toggleSort(event)" data-sort="mating_date">配种日期 <span class="sort-arrow"></span></th><th class="sortable" onclick="toggleSort(event)" data-sort="lambing_date">产羔日期 <span class="sort-arrow"></span></th><th>产羔数</th><th>活羔数</th><th>羔羊数</th><th>备注</th><th>操作</th></tr></thead>
+            <tbody id="dataBody"></tbody>
+        </table></div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted" id="pageInfo"></small>
+            <nav><ul class="pagination pagination-sm mb-0" id="pagination"></ul></nav>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- 产羔详情 Modal -->
+<div class="modal fade" id="lambModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h6 class="modal-title">产羔详情</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body" id="lambDetailBody"></div>
+            <div class="modal-footer"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">关闭</button></div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/bootstrap.bundle.min.js"></script>
+<script>
+const isEditor = {{ 'true' if session.role != 'user' else 'false' }};
+let currentPage = 1;
+
+async function init() {
+    loadData();
+}
+
+let sortBy = null, sortOrder = 'desc';
+function toggleSort(e) {
+    var col = e.currentTarget.dataset.sort;
+    if (sortBy === col) { sortOrder = sortOrder === 'asc' ? 'desc' : 'asc'; }
+    else { sortBy = col; sortOrder = 'asc'; }
+    document.querySelectorAll('.sort-arrow').forEach(function(s){ s.textContent = ''; });
+    var el = e.currentTarget;
+    el.querySelector('.sort-arrow').textContent = sortOrder === 'asc' ? ' ▲' : ' ▼';
+    loadData(1);
+}
+
+async function loadData(page = 1) {
+    currentPage = page;
+    const search = document.getElementById('searchInput').value;
+    const params = new URLSearchParams({page, per_page: 200, search});
+    if (sortBy) params.set('sort_by', sortBy);
+    if (sortOrder) params.set('sort_order', sortOrder);
+    const res = await fetch('/api/breeding?' + params);
+    const d = await res.json();
+
+    let html = '';
+    for (const r of d.items) {
+        html += `<tr>
+            <td><span class="fw-bold">${r.ewe_tag}</span></td>
+            <td>${r.ram_tag || '—'}</td>
+            <td>${r.mating_date || '—'}</td>
+            <td>${r.lambing_date}</td>
+            <td>${r.total_born}</td>
+            <td>${r.live_born}</td>
+            <td><span class="badge bg-info">${r.lamb_count || 0}</span></td>
+            <td>${r.remark || '—'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-info" onclick="viewDetail(${r.id})" title="详情"><i class="bi-eye"></i></button>
+                ${isEditor ? `<a href="/breeding/${r.id}/edit" class="btn btn-sm btn-outline-primary" title="编辑"><i class="bi-pencil"></i></a>` : ""}
+                ${isEditor ? `<button class="btn btn-sm btn-outline-danger" onclick="delRec(${r.id})" title="删除"><i class="bi-trash"></i></button>` : ""}
+            </td>
+        </tr>`;
+    }
+    document.getElementById('dataBody').innerHTML = html || '<tr><td colspan="9" class="text-center text-muted py-4">暂无数据</td></tr>';
+    document.getElementById('pageInfo').textContent = `共 ${d.total} 条`;
+
+    const tp = Math.ceil(d.total/d.per_page)||1;
+    let pag = '';
+    for (let i=1;i<=tp;i++) pag += `<li class="page-item ${i===page?'active':''}"><a class="page-link" href="#" onclick="loadData(${i})">${i}</a></li>`;
+    document.getElementById('pagination').innerHTML = pag;
+}
+
+async function viewDetail(id) {
+    const res = await fetch('/api/breeding/' + id);
+    const r = await res.json();
+    let html = '<table class="table table-sm mb-0"><tbody>';
+    html += '<tr><td class="text-muted">母羊</td><td class="fw-bold">' + r.ewe_tag + '</td></tr>';
+    html += '<tr><td class="text-muted">公羊</td><td>' + (r.ram_tag || '—') + '</td></tr>';
+    html += '<tr><td class="text-muted">配种日期</td><td>' + (r.mating_date || '—') + '</td></tr>';
+    html += '<tr><td class="text-muted">产羔日期</td><td>' + r.lambing_date + '</td></tr>';
+    html += '<tr><td class="text-muted">产羔数 / 活羔数</td><td>' + r.total_born + ' / ' + r.live_born + '</td></tr>';
+    html += '</tbody></table>';
+    html += '<hr><h6 class="small text-muted">羔羊明细</h6>';
+    if (r.lambs && r.lambs.length > 0) {
+        html += '<table class="table table-sm table-striped mb-0"><thead><tr><th>耳号</th><th>性别</th><th>初生重(kg)</th></tr></thead><tbody>';
+        r.lambs.forEach(function(l) {
+            html += '<tr><td>' + l.lamb_ear_tag + '</td><td>' + l.sex + '</td><td>' + l.birth_weight + '</td></tr>';
+        });
+        html += '</tbody></table>';
+    } else {
+        html += '<p class="text-muted small">无羔羊记录</p>';
+    }
+    document.getElementById('lambDetailBody').innerHTML = html;
+    new bootstrap.Modal('#lambModal').show();
+}
+
+async function delRec(id) {
+    if (!confirm('确定删除此记录？')) return;
+    await fetch(`/api/breeding/${id}`, {method:'DELETE'});
+    loadData(currentPage);
+}
+
+function exportData() { window.open('/api/export/breeding'); }
+init();
+</script>
+</body>
+</html>
